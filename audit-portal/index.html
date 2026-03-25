@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audit Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  </head>
+  <body>
+    <!-- ESTILO PARA NO MOSTRAR REACT HASTA VALIDAR -->
+    <style>
+      #root { display: none; }
+      @media print { #auth-screen { display: none !important; } #root { display: block !important; } }
+    </style>
+
+    <!-- PANTALLA DE AUTENTICACIÓN (LOCK SCREEN PREMIUM) -->
+    <div id="auth-screen" style="position: fixed; inset: 0; background-color: #f8fafc; background-image: radial-gradient(circle at 50% 0%, white 0%, transparent 60%), linear-gradient(to bottom, transparent, rgba(0,0,0,0.02)); z-index: 999999; display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; overflow: hidden;">
+      
+      <!-- Fondo: Grid Sutil Corporativo -->
+      <div style="position: absolute; inset: 0; background-image: linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px); background-size: 40px 40px; z-index: 0; pointer-events: none;"></div>
+
+      <div style="background: white; border: 1px solid #e2e8f0; border-radius: 20px; padding: 48px; width: 100%; max-width: 460px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02); text-align: center; box-sizing: border-box; position: relative; z-index: 10;">
+        
+        <!-- Logos Co-branded -->
+        <div style="display: flex; justify-content: center; gap: 20px; align-items: center; margin-bottom: 32px;">
+          <img src="/logoexcel.png" alt="Excel Grupo Financiero" style="height: 38px; object-fit: contain;">
+          <div style="width: 1px; height: 28px; background: #e2e8f0;"></div>
+          <img src="/smartazul.png" alt="Smart Testing" style="height: 32px; object-fit: contain;">
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 12px; color: #dc2626;">
+          <span class="material-symbols-outlined" style="font-size: 16px;">shield_lock</span>
+          <span style="font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;">Auditoría Estratégica Confidencial</span>
+        </div>
+        
+        <h2 style="font-family: 'Manrope', sans-serif; font-size: 26px; font-weight: 900; color: #0f172a; margin: 0 0 4px 0; letter-spacing: -1px;">Portal de Diagnóstico Estratégico</h2>
+        <h3 style="font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; color: #64748b; margin: 0 0 24px 0;">Excel Grupo Financiero</h3>
+        
+        <p style="font-size: 13.5px; color: #475569; margin: 0 0 32px 0; line-height: 1.6;">Este portal contiene información confidencial y de uso restringido. Ingrese su código de acceso para visualizar los resultados de la auditoría.</p>
+        
+        <div style="text-align: left; margin-bottom: 32px;">
+          <label style="display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Código de acceso seguro</label>
+          <div style="position: relative;">
+            <span class="material-symbols-outlined" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 20px;">key</span>
+            <input type="password" id="access-code-input" placeholder="••••••••" style="width: 100%; box-sizing: border-box; padding: 14px 16px 14px 46px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 18px; font-family: monospace; letter-spacing: 4px; outline: none; transition: all 0.2s; color: #0f172a; background: #f8fafc;" onfocus="this.style.borderColor='#0f172a'; this.style.backgroundColor='white'; this.style.boxShadow='0 0 0 4px rgba(15,23,42,0.05)'" onblur="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='#f8fafc'; this.style.boxShadow='none'" onkeypress="if(event.key === 'Enter') validateAuthAccess()">
+          </div>
+          <p id="auth-error" style="color: #dc2626; font-size: 12px; font-weight: 600; margin-top: 10px; display: none; align-items: center; gap: 4px;">
+            <span class="material-symbols-outlined" style="font-size: 16px;">error</span> Las credenciales provistas son incorrectas.
+          </p>
+        </div>
+
+        <button onclick="validateAuthAccess()" style="width: 100%; background: #0f172a; color: white; border: none; padding: 16px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; transition: all 0.2s; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(15,23,42,0.15);" onmouseover="this.style.background='#1e293b'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(15,23,42,0.2)'" onmouseout="this.style.background='#0f172a'; this.style.transform='none'; this.style.boxShadow='0 4px 12px rgba(15,23,42,0.15)'">
+          Acceder al portal <span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+
+    <script>
+      function validateAuthAccess() {
+        const inputEl = document.getElementById('access-code-input');
+        const errorEl = document.getElementById('auth-error');
+        const rootEl = document.getElementById('root');
+        
+        if (inputEl.value.trim().toUpperCase() === 'EXCEL2026') {
+          document.getElementById('auth-screen').style.display = 'none';
+          rootEl.style.display = 'block'; // Encender la App React (Vite)
+          sessionStorage.setItem('excel_audit_unlocked', 'true');
+        } else {
+          errorEl.style.display = 'flex';
+          inputEl.style.borderColor = '#dc2626';
+          inputEl.style.backgroundColor = '#fef2f2';
+        }
+      }
+
+      // Desactivar el Lock Screen si ya pasó la seguridad en esta sesión abierta
+      document.addEventListener('DOMContentLoaded', () => {
+        if (sessionStorage.getItem('excel_audit_unlocked') === 'true') {
+          const authScreen = document.getElementById('auth-screen');
+          if (authScreen) authScreen.style.display = 'none';
+          document.getElementById('root').style.display = 'block';
+        }
+      });
+    </script>
+
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Excel | Portal de Diagnóstico Estratégico</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Manrope', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              800: '#075985',
+              900: '#0c4a6e',
+              950: '#082f49',
+            },
+            surface: {
+              DEFAULT: '#ffffff',
+              50: '#fafafa',
+              100: '#f4f4f5',
+              200: '#e4e4e7',
+              border: '#e4e4e7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #fafafa; color: #18181b; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20; font-size: 20px; }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+
+    /* Nav transitions */
+    .nav-item { transition: all 0.2s ease; }
+    .nav-item.active { background-color: #f4f4f5; color: #09090b; font-weight: 500; }
+    
+    /* Section visibility */
+    .portal-section { display: none; animation: fadeIn 0.3s ease-out; }
+    .portal-section.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards */
+    .card { background: white; border: 1px solid var(--surface-border); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    
+    /* Status dots */
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+    .dot-critical { background: #ef4444; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1); }
+    .dot-high { background: #f97316; box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1); }
+    .dot-medium { background: #eab308; }
+
+    /* --- PRINT OPTIMIZATION --- */
+    @media print {
+      @page { size: A4 portrait; margin: 15mm 15mm 20mm 15mm; }
+      
+      /* Hide navigation & UI controls */
+      aside, header, #export, button, .filter-btn, .nav-item { 
+        display: none !important; 
+      }
+      
+      #print-cover { display: block !important; page-break-after: always; width: 100%; height: 100%; }
+      #print-footer { display: flex !important; position: fixed; bottom: 0; left: 0; right: 0; padding: 0 15mm 10mm 15mm; background: transparent; z-index: 100; justify-content: space-between; align-items: center; width: 100%; border-top: 1.5px solid #e4e4e7; font-size: 10px; color: #71717a; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+
+      /* MAIN CONTAINER FLIP */
+      main { display: none !important; }
+      body { height: auto !important; overflow: visible !important; background: white !important; }
+      
+      #export-container { 
+        display: block !important; 
+        width: 100% !important; 
+        max-width: 100% !important;
+        margin: 0 !important; 
+        padding: 0 !important; 
+        background: white !important;
+      }
+
+      /* Sections inside export container */
+      .export-section { 
+        display: block !important; 
+        page-break-after: always; 
+        padding: 40px 0 !important;
+        opacity: 1 !important;
+        animation: none !important;
+      }
+      
+      /* Prevent ugly breaks in cards */
+      .card, .finding-item, h2, h3, h4 { 
+        page-break-inside: avoid; 
+        break-inside: avoid;
+      }
+      h2 { page-break-after: avoid; }
+      
+      /* Ensure precise colors on print */
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+  <!-- AUTHENTICATION SCREEN -->
+  <div id="auth-screen" style="position: fixed; inset: 0; background-color: #fbfbfa; z-index: 999999; display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif;">
+    <div style="background: white; border: 1px solid #e4e4e7; border-radius: 12px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; box-sizing: border-box;">
+      <h2 style="font-family: 'Manrope', sans-serif; font-size: 22px; font-weight: 900; color: #18181b; margin-bottom: 8px;">Portal Diagnóstico</h2>
+      <h3 style="font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; color: #dc2626; margin-bottom: 24px;">Excel Grupo Financiero</h3>
+      <p style="font-size: 14px; color: #71717a; margin-bottom: 32px; line-height: 1.5;">Este reporte es estrictamente confidencial. Ingresa el código de acceso proporcionado por Smart Testing para continuar.</p>
+      
+      <div style="text-align: left; margin-bottom: 24px;">
+        <label style="display: block; font-size: 13px; font-weight: 700; color: #3f3f46; margin-bottom: 8px;">CÓDIGO DE SEGURIDAD</label>
+        <input type="password" id="access-code-input" placeholder="••••••••" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1.5px solid #e4e4e7; border-radius: 8px; font-size: 15px; font-family: monospace; letter-spacing: 2px; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#18181b'" onblur="this.style.borderColor='#e4e4e7'" onkeypress="if(event.key === 'Enter') validateAuthAccess()">
+        <p id="auth-error" style="color: #dc2626; font-size: 12px; font-weight: 600; margin-top: 8px; display: none; display: flex; align-items: center; gap: 4px;">
+          <span class="material-symbols-outlined" style="font-size: 14px;">error</span> Código incorrecto. Acceso denegado.
+        </p>
+      </div>
+
+      <button onclick="validateAuthAccess()" style="width: 100%; background: #18181b; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='#27272a'" onmouseout="this.style.background='#18181b'">
+        Desbloquear Portal <span class="material-symbols-outlined" style="font-size: 16px;">lock_open</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    function validateAuthAccess() {
+      const inputEl = document.getElementById('access-code-input');
+      const errorEl = document.getElementById('auth-error');
+      
+      // EL CÓDIGO HARDCODEADO ESTRICTO
+      const SECRET_CODE = 'EXCEL2026';
+      
+      if (inputEl.value.trim().toUpperCase() === SECRET_CODE) {
+        // Success: Destroy the Auth Screen
+        document.getElementById('auth-screen').style.display = 'none';
+        
+        // Save to SessionStorage so it survives F5 refreshes
+        sessionStorage.setItem('excel_audit_unlocked', 'true');
+      } else {
+        // Failure
+        errorEl.style.display = 'flex';
+        inputEl.style.borderColor = '#dc2626';
+        inputEl.style.backgroundColor = '#fef2f2';
+      }
+    }
+
+    // Check if the user already unlocked it in this session
+    document.addEventListener('DOMContentLoaded', () => {
+      if (sessionStorage.getItem('excel_audit_unlocked') === 'true') {
+        const authScreen = document.getElementById('auth-screen');
+        if (authScreen) authScreen.style.display = 'none';
+      }
+    });
+
+    // Make sure Authentication screen is completely hidden on PDF export
+    const style = document.createElement('style');
+    style.innerHTML = '@media print { #auth-screen { display: none !important; } } body.exporting-pdf #auth-screen { display: none !important; }';
+    document.head.appendChild(style);
+  </script>
+
+  <!-- PRINT ONLY: COVER PAGE & FOOTER -->
+  <div id="print-cover" class="hidden">
+    <div style="height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; box-sizing: border-box;">
+      <div style="flex:1"></div>
+      <img src="https://raw.githubusercontent.com/erick-guerrero/assets/main/smartazul.png" onerror="this.src='/smartazul.png'" alt="Smart Testing" style="height: 60px; margin-bottom: 60px;">
+      <h1 style="font-size: 48px; font-weight: 900; font-family: 'Manrope', sans-serif; color: #18181b; margin-bottom: 24px; line-height: 1.1; letter-spacing: -1px; max-width: 800px;">Diagnóstico Estratégico de la Plataforma Móvil de Inversiones</h1>
+      <div style="width: 80px; height: 6px; background-color: #dc2626; margin: 0 auto 32px auto;"></div>
+      <h2 style="font-size: 24px; color: #18181b; font-weight: 700; margin-bottom: 12px; font-family: 'Inter', sans-serif;">Excel Grupo Financiero</h2>
+      <p style="font-size: 14px; color: #71717a; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;" id="print-date"></p>
+      <div style="flex:1"></div>
+    </div>
+  </div>
+
+  <div id="print-footer" class="hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; border-top: 1.5px solid #e4e4e7; padding-top: 12px; font-size: 10px; color: #71717a; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+      <span>Smart Testing Audit</span>
+      <span>Excel Grupo Financiero</span>
+    </div>
+  </div>
+
+  <!-- THE LINEAR EXPORT CONTAINER -->
+  <div id="export-container" class="hidden"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const dateEl = document.getElementById('print-date');
+      if (dateEl) {
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        dateEl.textContent = new Date().toLocaleDateString('es-ES', options);
+      }
+    });
+  </script>
+
+  <!-- SIDEBAR (Linear/Notion style) -->
+  <aside class="w-[260px] bg-[#fbfbfa] border-r border-zinc-200 flex flex-col shrink-0 h-full">
+    <!-- Header/Logo -->
+    <div class="px-5 py-6 flex items-center gap-3 border-b border-zinc-100">
+      <div class="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center text-white font-display font-bold text-sm">EX</div>
+      <div>
+        <h1 class="font-semibold text-sm text-zinc-900">Excel Inversiones</h1>
+        <p class="text-[11px] text-zinc-500 font-medium">Auditoría Estratégica Q4</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-0.5">
+      
+      <!-- 1. OVERVIEW -->
+      <div class="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] px-3 mb-2 mt-2">Visión Global</div>
+      <a href="#dashboard" class="nav-item active flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">monitoring</span>
+        Panel Ejecutivo
+      </a>
+      <a href="#risk-center" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">warning</span>
+        Riesgos Clave
+      </a>
+      <a href="#business-impact" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">trending_down</span>
+        Impacto en Negocio
+      </a>
+
+      <!-- 2. DIAGNÓSTICO -->
+      <div class="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] px-3 mb-2 mt-6">Diagnóstico</div>
+      <a href="#findings" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">fact_check</span>
+        Hallazgos <span class="ml-auto bg-zinc-200 text-zinc-600 text-[10px] font-bold px-1.5 py-0.5 rounded">55</span>
+      </a>
+      <a href="#systemic-issues" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">account_tree</span>
+        Brechas Sistémicas
+      </a>
+      <a href="#digital-capabilities" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">devices</span>
+        Capacidades Digitales
+      </a>
+      <a href="#cx" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">sentiment_dissatisfied</span>
+        Experiencia del Cliente
+      </a>
+
+      <!-- 3. ANÁLISIS -->
+      <div class="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] px-3 mb-2 mt-6">Análisis</div>
+      <a href="#flow-analysis" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">route</span>
+        Análisis por Flujos
+      </a>
+      <a href="#evidence" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">library_books</span>
+        Evidencia
+      </a>
+      <a href="#scorecard" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">insert_chart</span>
+        Scorecard
+      </a>
+
+      <!-- 4. DECISIÓN -->
+      <div class="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] px-3 mb-2 mt-6">Decisión</div>
+      <a href="#recommendation" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">verified</span>
+        Recomendación Estratégica
+      </a>
+      <a href="#roadmap" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">map</span>
+        Plan de Transformación
+      </a>
+      <a href="#before-after" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-100/50">
+        <span class="material-symbols-outlined text-zinc-400 text-[18px]">compare_arrows</span>
+        Antes vs Después
+      </a>
+
+
+    </nav>
+
+    <!-- 5. ACCIONES (Footer) -->
+    <div class="p-4 border-t border-zinc-200 bg-[#fbfbfa]">
+      <a href="#" onclick="generateAndPrintReport(); return false;" class="mb-2 w-full flex justify-center items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white text-[13px] font-medium py-2.5 rounded-lg transition-colors cursor-pointer shadow-sm">
+        <span class="material-symbols-outlined text-[16px]">download</span>
+        Exportar Informe
+      </a>
+
+      
+      <div class="text-center mt-4 flex justify-center items-center gap-1.5 opacity-60">
+        <span class="text-[10px] text-zinc-500 font-medium">Powered by</span>
+        <img src="https://raw.githubusercontent.com/erick-guerrero/assets/main/smartazul.png" onerror="this.src='/smartazul.png'" alt="Smart Testing" class="h-3.5" />
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 overflow-y-auto h-full scroll-smooth bg-white relative">
+    
+    <!-- PREMIUM STICKY HEADER -->
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-zinc-200 px-8 h-16 flex items-center justify-between shadow-sm">
+      
+      <!-- LEFT: Logos -->
+      <div class="flex items-center gap-4">
+        <img src="https://raw.githubusercontent.com/erick-guerrero/assets/main/smartazul.png" onerror="this.src='/smartazul.png'" alt="Smart Testing" class="h-6 object-contain" />
+        <div class="h-4 w-px bg-zinc-300"></div>
+        <span class="text-sm font-semibold text-zinc-800">Excel Inversiones</span>
+      </div>
+
+      <!-- CENTER: Navigation -->
+      <nav class="hidden md:flex items-center gap-6">
+        <a href="#dashboard" class="text-xs font-semibold text-zinc-500 hover:text-zinc-900 transition-colors uppercase tracking-wide">Resumen</a>
+        <a href="#risk-center" class="text-xs font-semibold text-zinc-500 hover:text-zinc-900 transition-colors uppercase tracking-wide">Riesgos</a>
+        <a href="#business-impact" class="text-xs font-semibold text-zinc-500 hover:text-zinc-900 transition-colors uppercase tracking-wide">Impacto</a>
+        <a href="#flow-analysis" class="text-xs font-semibold text-zinc-500 hover:text-zinc-900 transition-colors uppercase tracking-wide">Flujos</a>
+        <a href="#recommendation" class="text-xs font-semibold text-zinc-500 hover:text-zinc-900 transition-colors uppercase tracking-wide">Recomendación</a>
+      </nav>
+
+      <!-- RIGHT: User & Actions -->
+      <div class="flex items-center gap-5">
+        <div class="flex flex-col items-end">
+          <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest leading-none">Auditoría Estratégica</span>
+          <span class="text-xs font-semibold text-zinc-800 leading-none mt-1">Marzo 2026 (Q4)</span>
+        </div>
+        <div class="w-8 h-8 rounded-full overflow-hidden border border-zinc-200 shadow-sm bg-zinc-100">
+          <img src="https://i.pravatar.cc/100?img=33" alt="Auditor Avatar" class="w-full h-full object-cover" />
+        </div>
+        <a href="#" onclick="generateAndPrintReport(); return false;" class="bg-zinc-900 text-white text-xs font-semibold px-5 py-2 rounded-lg hover:bg-zinc-800 transition-colors shadow-sm cursor-pointer whitespace-nowrap">
+          Exportar Informe
+        </a>
+      </div>
+
+    </header>
+
+    <div class="max-w-[900px] mx-auto pt-8">
+      
+      <!-- 1. EXECUTIVE DASHBOARD -->
+      <section id="dashboard" class="portal-section active">
+        
+        <!-- HEADER -->
+        <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div class="max-w-2xl">
+            <div class="flex items-center gap-2 text-red-600 text-[11px] font-bold uppercase tracking-[0.2em] mb-3">
+              <span class="material-symbols-outlined text-[16px]">warning</span>
+              Alerta Institucional
+            </div>
+            <h2 class="text-4xl font-display font-black text-zinc-900 tracking-tight leading-tight">Estado crítico del canal digital</h2>
+            <p class="text-zinc-600 text-lg mt-3 font-medium leading-relaxed">
+              La plataforma actual expone a la institución a riesgos financieros y operativos activos.
+            </p>
+          </div>
+          <div class="flex flex-col items-end gap-2 shrink-0">
+            <div class="flex gap-3">
+              <a href="#roadmap" class="bg-white border border-zinc-200 text-zinc-800 font-semibold px-5 py-3 rounded-lg hover:bg-zinc-50 shadow-sm transition-colors text-sm flex items-center gap-2 whitespace-nowrap lg:hover:shadow-md">
+                <span class="material-symbols-outlined text-[18px]">map</span> Ver plan de transformación
+              </a>
+            </div>
+            <p class="text-[11px] text-zinc-500 font-medium tracking-wide">La exposición actual requiere acción en el corto plazo.</p>
+          </div>
+        </div>
+
+        <!-- MAIN KPI & KEY CARDS -->
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 mb-10">
+          
+          <!-- Global Score (Main KPI) -->
+          <div class="xl:col-span-4 bg-gradient-to-b from-zinc-900 to-zinc-950 text-white relative flex flex-col justify-between p-8 rounded-[1.5rem] shadow-[0_0_40px_rgba(239,68,68,0.08)] overflow-hidden min-h-[340px] border border-zinc-800 transition-transform duration-300 hover:scale-[1.01] cursor-default">
+            <div class="relative z-10 w-full mb-8">
+              <div class="text-[10px] font-bold text-zinc-400 mb-3 uppercase tracking-[0.2em]">Puntuación de Riesgo Sistémico</div>
+              <div class="flex items-baseline gap-2">
+                <span class="text-7xl font-black tracking-tighter text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.25)]">3.0</span>
+                <span class="text-2xl font-medium text-zinc-500">/ 10</span>
+              </div>
+              
+              <!-- SCORE CONTEXT -->
+              <div class="mt-6 flex flex-col gap-2 border-l-2 border-red-900/50 pl-4 bg-red-950/10 p-3 rounded-r-lg">
+                <div class="flex items-center justify-between text-[13px]">
+                  <span class="text-zinc-400 font-medium">Industry benchmark:</span>
+                  <span class="font-bold text-white">7.5</span>
+                </div>
+                <div class="flex items-center justify-between text-[13px]">
+                  <span class="text-zinc-400 font-medium">Gap competitivo:</span>
+                  <span class="font-bold text-red-500">-4.5</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="relative z-10 mt-auto pt-6 border-t border-zinc-800">
+              <p class="text-[13px] text-zinc-300 font-medium leading-relaxed mb-4 italic">
+                "Este nivel de madurez es incompatible con los estándares de una plataforma financiera moderna."
+              </p>
+              <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-500/10 text-red-400 font-bold text-xs border border-red-500/20">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+                VULNERABILIDAD CRÍTICA
+              </div>
+            </div>
+            <!-- Decorative icon -->
+            <span class="material-symbols-outlined absolute -bottom-10 -right-6 text-[220px] text-red-500 opacity-5 pointer-events-none mix-blend-screen">warning</span>
+          </div>
+
+          <!-- Key Cards Grid -->
+          <div class="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-7 bg-white border border-zinc-200 rounded-[1.5rem] border-l-[4px] border-l-red-600 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col cursor-default">
+              <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-red-600 text-[20px]">shield_lock</span>
+                </div>
+                <span class="bg-red-50 text-red-700 font-bold px-2 py-1 rounded-[4px] text-[10px] uppercase tracking-widest border border-red-100 shadow-sm">Crítico</span>
+              </div>
+              <h4 class="text-[16px] font-bold text-zinc-900 mb-1">Exposición Financiera</h4>
+              <p class="text-[13px] text-zinc-500 leading-relaxed mt-auto">Vulnerabilidad de acceso que sitúa a la institución bajo contingencias legales inminentes por suplantación.</p>
+            </div>
+            
+            <div class="p-7 bg-white border border-zinc-200 rounded-[1.5rem] border-l-[4px] border-l-orange-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col cursor-default">
+              <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-orange-600 text-[20px]">speed</span>
+                </div>
+                <span class="bg-orange-50 text-orange-700 font-bold px-2 py-1 rounded-[4px] text-[10px] uppercase tracking-widest border border-orange-100 shadow-sm">Alto</span>
+              </div>
+              <h4 class="text-[16px] font-bold text-zinc-900 mb-1">Riesgo Operativo</h4>
+              <p class="text-[13px] text-zinc-500 leading-relaxed mt-auto">Degradación sistémica que paraliza la ejecución en tiempo real de transacciones críticas.</p>
+            </div>
+
+            <div class="p-7 bg-white border border-zinc-200 rounded-[1.5rem] border-l-[4px] border-l-red-600 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col cursor-default">
+              <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-red-600 text-[20px]">handshake</span>
+                </div>
+                <span class="bg-red-50 text-red-700 font-bold px-2 py-1 rounded-[4px] text-[10px] uppercase tracking-widest border border-red-100 shadow-sm">Crítico</span>
+              </div>
+              <h4 class="text-[16px] font-bold text-zinc-900 mb-1">Pérdida de Clientes</h4>
+              <p class="text-[13px] text-zinc-500 leading-relaxed mt-auto">Destrucción activa de lealtad ocasionando que prospectos de alto valor abandonen el embudo transaccional.</p>
+            </div>
+
+            <div class="p-7 bg-white border border-zinc-200 rounded-[1.5rem] border-l-[4px] border-l-orange-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col cursor-default">
+              <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-orange-600 text-[20px]">devices</span>
+                </div>
+                <span class="bg-orange-50 text-orange-700 font-bold px-2 py-1 rounded-[4px] text-[10px] uppercase tracking-widest border border-orange-100 shadow-sm">Alto</span>
+              </div>
+              <h4 class="text-[16px] font-bold text-zinc-900 mb-1">Crecimiento Estancado</h4>
+              <p class="text-[13px] text-zinc-500 leading-relaxed mt-auto">Arquitectura rígida que impide categóricamente la escalabilidad de nuevos productos financieros.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- EXECUTIVE INTERPRETATION BLOCK -->
+        <div class="my-10 p-8 bg-white border border-zinc-200 rounded-[1.5rem] text-center max-w-4xl mx-auto shadow-[0_4px_20px_-10px_rgba(0,0,0,0.06)] hover:shadow-md transition-shadow duration-300">
+          <p class="text-lg md:text-xl font-bold text-zinc-900 leading-relaxed max-w-3xl mx-auto font-display">
+            "Este no es un conjunto de problemas aislados.<br />
+            Es un ecosistema operando <span class="text-red-600">sin controles financieros críticos</span>."
+          </p>
+        </div>
+
+        <!-- BUSINESS IMPACT SECTION -->
+        <h3 class="text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Impacto directo en el negocio</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="p-6 bg-[#fafafa] border border-zinc-200/60 rounded-[1.5rem] hover:bg-white hover:border-red-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col cursor-default">
+            <h4 class="font-bold text-zinc-900 flex items-center gap-2 mb-3 text-[14px]">
+              <span class="material-symbols-outlined text-red-500 text-[20px]">trending_down</span> Ingresos digitales inexistentes
+            </h4>
+            <p class="text-[13px] text-zinc-600 leading-relaxed font-medium">
+              Fricción severa que neutraliza la captación autónoma de usuarios institucionales, resultando en cero aportaciones digitales nativas.
+            </p>
+          </div>
+          
+          <div class="p-6 bg-[#fafafa] border border-zinc-200/60 rounded-[1.5rem] hover:bg-white hover:border-orange-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col cursor-default">
+            <h4 class="font-bold text-zinc-900 flex items-center gap-2 mb-3 text-[14px]">
+              <span class="material-symbols-outlined text-orange-500 text-[20px]">account_balance</span> Exposición financiera activa
+            </h4>
+            <p class="text-[13px] text-zinc-600 leading-relaxed font-medium">
+              Carencia estructural de auditoría post-trade y protocolos MFA que deja a la firma indefensa ante reclamaciones legales originadas por suplantación.
+            </p>
+          </div>
+
+          <div class="p-6 bg-[#fafafa] border border-zinc-200/60 rounded-[1.5rem] hover:bg-white hover:border-red-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col cursor-default">
+            <h4 class="font-bold text-zinc-900 flex items-center gap-2 mb-3 text-[14px]">
+              <span class="material-symbols-outlined text-zinc-400 text-[20px]">support_agent</span> Dependencia operativa crítica
+            </h4>
+            <p class="text-[13px] text-zinc-600 leading-relaxed font-medium">
+              Procesos manuales absorben la totalidad de la fuerza laboral, inflando costos e impidiendo la innovación del canal principal.
+            </p>
+          </div>
+        </div>
+      </section>p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- 2. RISK CENTER -->
+      <section id="risk-center" class="portal-section">
+        <div class="mb-10">
+          <div class="flex items-center gap-2 text-zinc-500 text-xs font-medium mb-3">
+            <span class="material-symbols-outlined text-[14px]">shield_lock</span>
+            Visión Global
+          </div>
+          <h2 class="text-3xl font-display font-bold text-zinc-900">Risk Center</h2>
+        </div>
+        <div class="grid grid-cols-2 gap-5">
+          <div class="card p-6">
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mb-4 text-red-600">
+              <span class="material-symbols-outlined">security</span>
+            </div>
+            <h3 class="font-bold text-zinc-900 mb-2">Riesgo Institucional y Seguridad</h3>
+            <p class="text-sm text-zinc-600 leading-relaxed mb-4">La ausencia de Autenticación Multifactor (MFA) explícita y cierres de sesión frágiles exponen a los usuarios a tomas de control de cuenta.</p>
+            <div class="flex items-center gap-2 text-xs font-medium text-red-600 bg-red-50 px-2.5 py-1.5 rounded w-fit">
+              <span class="dot dot-critical"></span> Mitigación requerida: 30 días
+            </div>
+          </div>
+          <div class="card p-6">
+            <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mb-4 text-orange-600">
+              <span class="material-symbols-outlined">gavel</span>
+            </div>
+            <h3 class="font-bold text-zinc-900 mb-2">Riesgo Legal / Cumplimiento</h3>
+            <p class="text-sm text-zinc-600 leading-relaxed mb-4">Operaciones de rescate y aporte sin generación automática de comprobantes o rastro seguro limitan la defensa ante reclamaciones.</p>
+            <div class="flex items-center gap-2 text-xs font-medium text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded w-fit">
+              <span class="dot dot-high"></span> Riesgo Auditoría Externa
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. FINDINGS (Interactive Tab/Filter List) -->
+      <section id="findings" class="portal-section">
+        <div class="mb-8">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-2 text-zinc-500 text-xs font-medium mb-3">
+                <span class="material-symbols-outlined text-[14px]">list_alt</span>
+                Análisis Profundo
+              </div>
+              <h2 class="text-3xl font-display font-bold text-zinc-900">Portfolio of Exposures</h2>
+            </div>
+            
+            <!-- Filters -->
+            <div class="flex gap-2 bg-zinc-100 p-1 rounded-lg">
+              <button class="filter-btn active px-4 py-1.5 text-xs font-semibold rounded-md bg-white text-zinc-900 shadow-sm" data-filter="all">All (55)</button>
+              <button class="filter-btn px-4 py-1.5 text-xs font-semibold rounded-md text-zinc-500 hover:text-zinc-900" data-filter="critical">Críticas (4)</button>
+              <button class="filter-btn px-4 py-1.5 text-xs font-semibold rounded-md text-zinc-500 hover:text-zinc-900" data-filter="high">Altas (9)</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3" id="finding-list">
+          <!-- Finding 1 -->
+          <div class="finding-item card overflow-hidden border border-zinc-200 transition-all hover:border-zinc-300" data-severity="critical">
+            <div class="p-5 cursor-pointer flex items-start gap-4 transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden')">
+              <div class="mt-1"><span class="dot dot-critical scale-125"></span></div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-bold text-zinc-900 text-sm">Ausencia de Autenticación MFA</h4>
+                  <span class="text-[10px] font-bold uppercase tracking-widest text-red-600 bg-red-50 px-2 py-0.5 rounded">Critical</span>
+                </div>
+                <p class="text-sm text-zinc-500 mt-1">El acceso a saldos y aportes financieros depende de una contraseña simple estática.</p>
+              </div>
+            </div>
+            <!-- Expanded Details -->
+            <div class="hidden bg-zinc-50 border-t border-zinc-100 p-5 pl-12">
+              <h5 class="text-xs font-bold text-zinc-900 uppercase tracking-wide mb-2">Impacto Comercial</h5>
+              <p class="text-sm text-zinc-600 mb-4">La institución corre el riesgo del 100% de la responsabilidad financiera en caso de suplantación de identidad. Inviabiliza el cumplimiento normativo moderno.</p>
+              <button class="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded hover:bg-blue-100 transition-colors">Ver Evidencia #01</button>
+            </div>
+          </div>
+
+          <!-- Finding 2 -->
+          <div class="finding-item card overflow-hidden border border-zinc-200 transition-all hover:border-zinc-300" data-severity="critical">
+            <div class="p-5 cursor-pointer flex items-start gap-4 transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden')">
+              <div class="mt-1"><span class="dot dot-critical scale-125"></span></div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-bold text-zinc-900 text-sm">Transacciones Ciegas (Sin Recibos)</h4>
+                  <span class="text-[10px] font-bold uppercase tracking-widest text-red-600 bg-red-50 px-2 py-0.5 rounded">Critical</span>
+                </div>
+                <p class="text-sm text-zinc-500 mt-1">Al crear órdenes de aporte/rescate, la app no genera ningún comprobante legal o digital para el cliente.</p>
+              </div>
+            </div>
+            <!-- Expanded Details -->
+            <div class="hidden bg-zinc-50 border-t border-zinc-100 p-5 pl-12">
+              <h5 class="text-xs font-bold text-zinc-900 uppercase tracking-wide mb-2">Impacto Comercial</h5>
+              <p class="text-sm text-zinc-600">Genera desconfianza inmediata, forzando al cliente a utilizar el Call Center para validar cada transacción ejecutada "digitalmente".</p>
+            </div>
+          </div>
+
+          <!-- Finding 3 -->
+          <div class="finding-item card overflow-hidden border border-zinc-200 transition-all hover:border-zinc-300" data-severity="high">
+            <div class="p-5 cursor-pointer flex items-start gap-4 transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden')">
+              <div class="mt-1"><span class="dot dot-high scale-125"></span></div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-bold text-zinc-900 text-sm">Descargas de Estados de Cuenta Rotas</h4>
+                  <span class="text-[10px] font-bold uppercase tracking-widest text-orange-600 bg-orange-50 px-2 py-0.5 rounded">High</span>
+                </div>
+                <p class="text-sm text-zinc-500 mt-1">Incompatibilidad estructural en el visor MIME type para PDFs en iOS/Android.</p>
+              </div>
+            </div>
+            <!-- Expanded Details -->
+            <div class="hidden bg-zinc-50 border-t border-zinc-100 p-5 pl-12">
+              <h5 class="text-xs font-bold text-zinc-900 uppercase tracking-wide mb-2">Impacto Comercial</h5>
+              <p class="text-sm text-zinc-600">Aumenta la sobrecarga operativa, ya que el usuario debe solicitar a un ejecutivo su estado de cuenta mensual.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. FLOW ANALYSIS -->
+      <section id="flow-analysis" class="portal-section">
+        <div class="mb-10">
+          <div class="flex items-center gap-2 text-zinc-500 text-xs font-medium mb-3">
+            <span class="material-symbols-outlined text-[14px]">account_tree</span>
+            Análisis Profundo
+          </div>
+          <h2 class="text-3xl font-display font-bold text-zinc-900">Client Journey Friction</h2>
+          <p class="text-zinc-500 mt-2 text-sm max-w-2xl">Mapeo de la degradación de confianza a través de los flujos críticos del producto.</p>
+        </div>
+
+        <div class="flex gap-6 border-b border-zinc-200 mb-8">
+          <button class="flow-tab active pb-3 text-sm font-semibold border-b-2 border-zinc-900 text-zinc-900">Login & Auth</button>
+          <button class="flow-tab pb-3 text-sm font-medium border-b-2 border-transparent text-zinc-500 hover:text-zinc-700">Flujo Transaccional</button>
+          <button class="flow-tab pb-3 text-sm font-medium border-b-2 border-transparent text-zinc-500 hover:text-zinc-700">Visualización de Saldos</button>
+        </div>
+
+        <div class="card p-8 bg-zinc-50/50">
+          <div class="relative pl-6 border-l-2 border-zinc-200 space-y-8">
+            <div class="relative">
+              <span class="absolute -left-[31px] bg-white border-2 border-red-500 w-4 h-4 rounded-full mt-1.5"></span>
+              <h4 class="font-bold text-zinc-900">Punto de Entrada (Login)</h4>
+              <p class="text-sm text-red-600 mt-1 font-medium bg-red-50 inline-block px-2 py-0.5 rounded">FRICCIÓN CRÍTICA</p>
+              <p class="text-sm text-zinc-600 mt-2">Ausencia de Biometría (FaceID/TouchID). Obliga al usuario a escribir credenciales largas en dispositivo móvil cada vez.</p>
+            </div>
+            
+            <div class="relative">
+              <span class="absolute -left-[31px] bg-white border-2 border-orange-500 w-4 h-4 rounded-full mt-1.5"></span>
+              <h4 class="font-bold text-zinc-900">Validación de Perfil</h4>
+              <p class="text-sm text-zinc-600 mt-2">Carga retardada por llamadas asíncronas no optimizadas. Pantalla en blanco perceptual temporal.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10. ROADMAP -->
+      <section id="roadmap" class="portal-section">
+        <div class="mb-10">
+          <div class="flex items-center gap-2 text-zinc-500 text-xs font-medium mb-3">
+            <span class="material-symbols-outlined text-[14px]">map</span>
+            Ruta de Acción
+          </div>
+          <h2 class="text-3xl font-display font-bold text-zinc-900">Execution Roadmap</h2>
+          <p class="text-zinc-500 mt-2 text-sm">Cronograma ejecutivo sugerido para mitigar el riesgo e iniciar la transformación estructural.</p>
+        </div>
+
+        <div class="space-y-4">
+          <div class="card p-6 border-l-4 border-l-zinc-900">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-xs font-bold tracking-widest uppercase text-zinc-500">FASE 1 • 30 DÍAS</span>
+                <h3 class="text-lg font-bold text-zinc-900 mt-1">Mitigación Inmediata de Riesgos</h3>
+              </div>
+              <span class="bg-zinc-100 text-zinc-600 text-xs font-bold px-2 py-1 rounded">Q2 2026</span>
+            </div>
+            <ul class="text-sm text-zinc-600 mt-4 space-y-2 list-disc pl-5">
+              <li>Implementación forzosa de MFA (Autenticación Multifactor).</li>
+              <li>Soporte nativo para FaceID / Biometría.</li>
+              <li>Generación de PDF confirmatorio en transacciones post-trade.</li>
+            </ul>
+          </div>
+          
+          <div class="card p-6 border-l-4 border-l-zinc-300 opacity-60">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-xs font-bold tracking-widest uppercase text-zinc-500">FASE 2 • 90 DÍAS</span>
+                <h3 class="text-lg font-bold text-zinc-900 mt-1">Estabilización y UX</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ALL OTHER SECTIONS FALLBACK (To show tabs working) -->
+      <section id="business-impact" class="portal-section"><h2 class="text-3xl font-display font-bold text-zinc-900">Business Impact</h2><p class="text-zinc-500 mt-2">Contenido de la sección...</p></section>
+      <section id="systemic-issues" class="portal-section"><h2 class="text-3xl font-display font-bold text-zinc-900">Systemic Issues</h2><p class="text-zinc-500 mt-2">Contenido de la sección...</p></section>
+      <section id="evidence" class="portal-section"><h2 class="text-3xl font-display font-bold text-zinc-900">Evidence Library</h2><p class="text-zinc-500 mt-2">Contenido de la sección...</p></section>
+      <section id="scorecard" class="portal-section"><h2 class="text-3xl font-display font-bold text-zinc-900">Capability Scorecard</h2><p class="text-zinc-500 mt-2">Contenido de la sección...</p></section>
+      <section id="recommendation" class="portal-section"><h2 class="text-3xl font-display font-bold text-zinc-900">Strategic Recommendation</h2><p class="text-zinc-500 mt-2">Contenido de la sección...</p></section>
+      <section id="transformation" class="portal-section"><h2 class="text-3xl font-display font-bold text-zinc-900">Transformation ROI</h2><p class="text-zinc-500 mt-2">Contenido de la sección...</p></section>
+      <section id="export" class="portal-section">
+        <div class="card p-12 text-center bg-zinc-50">
+          <span class="material-symbols-outlined text-[48px] text-zinc-300 mb-4">description</span>
+          <h2 class="text-2xl font-display font-bold text-zinc-900 mb-2">Generar Reporte Ejecutivo</h2>
+          <p class="text-zinc-500 text-sm mb-6 max-w-sm mx-auto">Exporta un PDF con resolución de impresión que contiene los hallazgos críticos, el impacto comercial y la hoja de ruta de la junta.</p>
+          <button onclick="window.print(); return false;" class="bg-zinc-900 text-white font-medium px-6 py-2.5 rounded-lg shadow-md hover:bg-zinc-800 transition-colors inline-flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">download</span> Descargar PDF
+          </button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    // Navigation logic
+    const navItems = document.querySelectorAll('.nav-item');
+    const sections = document.querySelectorAll('.portal-section');
+
+    function navigateTo(id) {
+      if (!id || id === '#') return;
+      
+      const targetId = id.replace('#', '');
+      const targetSection = document.getElementById(targetId);
+      if (!targetSection) return;
+
+      // Update Nav
+      navItems.forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('href') === id) {
+          item.classList.add('active');
+        }
+      });
+
+      // Update Content
+      sections.forEach(section => {
+        section.classList.remove('active');
+      });
+      targetSection.classList.add('active');
+      
+      // Scroll to top
+      document.querySelector('main').scrollTop = 0;
+    }
+
+    // Attach click events
+    navItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        const href = item.getAttribute('href');
+        if (href.startsWith('#')) {
+          e.preventDefault();
+          navigateTo(href);
+          history.pushState(null, '', href);
+        }
+      });
+    });
+
+    // Handle initial load / refresh
+    window.addEventListener('load', () => {
+      const hash = window.location.hash || '#dashboard';
+      navigateTo(hash);
+    });
+
+    // Handle back button
+    window.addEventListener('popstate', () => {
+      const hash = window.location.hash || '#dashboard';
+      navigateTo(hash);
+    });
+
+    // Findings Filter Logic
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const findingsList = document.querySelectorAll('.finding-item');
+
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Active state
+        filterBtns.forEach(b => {
+          b.classList.remove('active', 'bg-white', 'text-zinc-900', 'shadow-sm');
+          b.classList.add('text-zinc-500');
+        });
+        btn.classList.add('active', 'bg-white', 'text-zinc-900', 'shadow-sm');
+        btn.classList.remove('text-zinc-500');
+
+        // Filter
+        const filter = btn.getAttribute('data-filter');
+        findingsList.forEach(finding => {
+          if (filter === 'all' || finding.getAttribute('data-severity') === filter) {
+            finding.style.display = 'block';
+          } else {
+            finding.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // --- CONTINUOUS MACRO-EXPORT LOGIC (4-PHASE REPORT) ---
+    function generateAndPrintReport() {
+      const container = document.getElementById('export-container');
+      container.innerHTML = '';
+      
+      // A. Portada Aprobada
+      const coverHtml = `
+        <div class="export-page" style="height: 95vh; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 40px; font-family: 'Inter', sans-serif;">
+          <h1 style="font-size: 42px; font-weight: 900; font-family: 'Manrope', sans-serif; border: none; margin-bottom: 24px;">Diagnóstico Estratégico de la Plataforma Móvil de Inversiones</h1>
+          <div style="width: 60px; height: 5px; background: #dc2626; margin: 0 auto 30px auto;"></div>
+          <h2 style="font-size: 24px; font-weight: 700;">Excel Grupo Financiero</h2>
+        </div>
+      `;
+
+      // B. Índice Aprobado
+      const tocHtml = `
+        <div class="export-page" style="page-break-after: always; padding: 40px; font-family: 'Inter', sans-serif;">
+          <h1 style="font-size: 32px; font-weight: 900; font-family: 'Manrope', sans-serif; border-bottom: 2px solid #ccc; padding-bottom: 12px; margin-bottom: 30px;">Contenido</h1>
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <div><h3 style="color: #dc2626; font-size: 18px; font-weight: 800; margin-bottom: 8px;">1. VISIÓN GLOBAL</h3><p style="font-size: 14px; color: #3f3f46; font-weight: 500;">Panel Ejecutivo, Resumen Ejecutivo, Riesgos Clave, Impacto en Negocio</p></div>
+            <div><h3 style="color: #dc2626; font-size: 18px; font-weight: 800; margin-bottom: 8px;">2. DIAGNÓSTICO</h3><p style="font-size: 14px; color: #3f3f46; font-weight: 500;">Hallazgos, Brechas Sistémicas, Capacidades Digitales, Experiencia del Cliente</p></div>
+            <div><h3 style="color: #dc2626; font-size: 18px; font-weight: 800; margin-bottom: 8px;">3. ANÁLISIS</h3><p style="font-size: 14px; color: #3f3f46; font-weight: 500;">Análisis por Flujos, Evidencia</p></div>
+            <div><h3 style="color: #dc2626; font-size: 18px; font-weight: 800; margin-bottom: 8px;">4. DECISIÓN</h3><p style="font-size: 14px; color: #3f3f46; font-weight: 500;">Recomendación Estratégica, Plan de Transformación</p></div>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML += coverHtml + tocHtml;
+
+      // C. Lógica de Extracción Exacta (Mapeo de IDs reales en el DOM)
+      const reportArchitecture = [
+        { title: '1. VISIÓN GLOBAL', ids: ['dashboard', 'business-impact', 'risk-center'] },
+        { title: '2. DIAGNÓSTICO', ids: ['findings', 'systemic-issues', 'digital-capabilities', 'cx'] },
+        { title: '3. ANÁLISIS', ids: ['flow-analysis', 'evidence'] },
+        { title: '4. DECISIÓN', ids: ['recommendation', 'roadmap'] }
+      ];
+
+      reportArchitecture.forEach(chapter => {
+        let chapterOutput = `
+          <div class="export-page" style="page-break-after: always; padding: 40px; font-family: 'Inter', sans-serif;">
+            <h1 style="font-size: 32px; font-weight: 900; font-family: 'Manrope', sans-serif; color: #18181b; border-bottom: 3px solid #e4e4e7; padding-bottom: 12px; margin-bottom: 32px;">${chapter.title}</h1>
+            <div style="display: flex; flex-direction: column; gap: 32px;">
+        `;
+        
+        let hasContent = false;
+        
+        chapter.ids.forEach(id => {
+          const liveNode = document.getElementById(id);
+          if (liveNode) {
+            hasContent = true;
+            const printClone = liveNode.cloneNode(true);
+            
+            // Exponer divs ocultos (Pestañas cerradas, info oculta por defecto)
+            printClone.querySelectorAll('.hidden, [hidden], [style*="display: none"]').forEach(n => {
+              n.classList.remove('hidden');
+              n.removeAttribute('hidden');
+              n.style.display = 'block';
+            });
+
+            // Remover elementos de interacción que arruinan la vista PDF
+            const uiKillList = ['button', 'nav', 'aside', 'header', '.filter-btn', 'a[href^="#"]', '.tab-selector'];
+            uiKillList.forEach(selector => printClone.querySelectorAll(selector).forEach(n => n.remove()));
+
+            // Limpiar clases de posicionamiento destructivas y opacidad 0 (para que el Dashboard se vea)
+            printClone.querySelectorAll('*').forEach(n => {
+              if (n.className && typeof n.className.replace === 'function') {
+                n.className = n.className.replace(/\b(h-screen|max-h-screen|overflow-hidden|overflow-y-auto|absolute|fixed|sticky|grid-cols-\S+|opacity-0|animate-\S+|transition-\S+)\b/g, '');
+              }
+              n.style.pageBreakInside = 'avoid';
+              n.style.breakInside = 'avoid';
+              n.style.opacity = '1';  // Forzar visibilidad
+              n.style.animation = 'none'; // Quitar animaciones atoradas
+              n.style.transform = 'none'; // Quitar translates
+            });
+
+            // Y forzar también el nodo principal a ser visible
+            printClone.style.opacity = '1';
+            printClone.style.animation = 'none';
+            printClone.style.transform = 'none';
+            if (printClone.className && typeof printClone.className.replace === 'function') {
+                printClone.className = printClone.className.replace(/\b(opacity-0|animate-\S+)\b/g, '');
+            }
+
+            chapterOutput += `<div class="report-module" style="page-break-inside: avoid; margin-bottom: 32px;">${printClone.innerHTML}</div>`;
+          }
+        });
+
+        chapterOutput += `</div></div>`;
+        
+        // Solo agregar el capítulo si se extrajo aunque sea un nodo
+        if (hasContent) {
+          container.innerHTML += chapterOutput;
+        }
+      });
+
+      // D. Iniciar Transición a Exportación e Impresión
+      document.body.classList.add('pdf-generating');
+      document.title = "Reporte Ejecutivo - Preparando Impresión...";
+      
+      setTimeout(() => {
+        window.print();
+        
+        // Restaurar estado
+        setTimeout(() => { 
+          document.body.classList.remove('pdf-generating');
+          container.innerHTML = ''; 
+          document.title = "Excel | Portal de Diagnóstico Estratégico";
+        }, 1000);
+      }, 500);
+    }
+  </script>
+</body>
+</html>
